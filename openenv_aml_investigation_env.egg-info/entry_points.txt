@@ -1,0 +1,2 @@
+[console_scripts]
+server = aml_investigation_env.server.app:main
