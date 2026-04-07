@@ -26,7 +26,7 @@ The agent can choose between two fundamental action modes. **All actions strictl
 1. **Investigative Actions (-0.05 step penalty):** Keeps the episode alive `done=False`. Requesting `request_kyc`, `trace_network`, or `check_history` reveals those specific hidden chunks of data in the following Observation. 
 2. **Terminal Actions:** Immediately ends the episode `done=True` and submits to the grader. `approve_transaction`, `freeze_account`, or `escalate_to_fincen`.
 
-### 🛡️ Anti-Exploit Mechanics
+### Anti-Exploit Mechanics
 *   **Amnesia Prevention:** Applying an action like `request_kyc` twice aggressively penalizes the agent by `-0.20` and fails to yield new information.
 *   **Infinite Loop Safety:** Hard cap cutoff bounds at 6 steps. Auto-terminates with `0.0` points if an agent refuses a terminal decision.
 
