@@ -92,32 +92,28 @@ When you access the Hugging Face Space URL, OpenEnv automatically provides an in
 The environment uses a **30% mixture of fixed benchmark tasks**. Click **Reset** until the `amount_usd` matches one of the values below to follow the manual walkthrough:
 
 **1. The "Clean Transfer" (Easy - $150.00)**
-*   **Step 1**: Select `request_kyc` + Type Rationale: "Verifying sender identity". 
-*   **Step 2**: Click **Step**. → Verify `kyc_data` shows `status: verified`.
-*   **Step 3**: Select `approve_transaction` + Type Rationale: "Verified low-risk entity".
-*   **Final Result**: Case closed with **Reward: 1.0**.
+*   **Action 1**: Select `request_kyc` (-0.05 cost). → Verify `kyc_data` says `status: verified`.
+*   **Action 2**: Select `approve_transaction`. 
+*   **Trajectory Score**: **0.95** (1.00 base - 0.05 investigative cost).
 
 **2. The "Structuring Risk" (Medium - $9,500.00)**
-*   **Step 1**: Select `check_history` + Type Rationale: "Checking past alerts for sub-10k transfer".
-*   **Step 2**: Click **Step**. → Verify `history_data` shows `suspicious_flags: 1`.
-*   **Step 3**: Select `trace_network` + Type Rationale: "Checking for jurisdictional hops".
-*   **Step 4**: Click **Step**. → Verify `network_data` shows `hops: 3`. 
-*   **Step 5**: Select `freeze_account` + Type Rationale: "Elevated risk flags require manual hold".
-*   **Final Result**: Case closed with **Reward: 1.0**.
+*   **Action 1**: Select `check_history` (-0.05 cost). → Verify `history_data` shows `suspicious_flags: 1`.
+*   **Action 2**: Select `trace_network` (-0.05 cost). → Verify `network_data` shows `hops: 3`. 
+*   **Action 3**: Select `freeze_account`.
+*   **Trajectory Score**: **0.90** (1.00 base - 0.10 investigative cost).
 
 **3. The "Shell Network" (Hard - $450,000.00)**
-*   **Step 1**: Select `request_kyc` + Type Rationale: "Large corporate transfer investigation".
-*   **Step 2**: Click **Step**. → Verify `kyc_data` says `Shell company suspicion`.
-*   **Step 3**: Select `trace_network` + Type Rationale: "Tracing beneficiary structure".
-*   **Step 4**: Click **Step**. → Verify `network_data` shows `hops: 5` and `jurisdictions: ["High Risk A", "High Risk B"]`.
-*   **Step 5**: Select `escalate_to_fincen` + Type Rationale: "Definitive money laundering via high-risk shell network".
-*   **Final Result**: Case closed with **Reward: 1.0**.
+*   **Action 1**: Select `request_kyc` (-0.05 cost). → Verify `kyc_data` says `Shell company suspicion`.
+*   **Action 2**: Select `trace_network` (-0.05 cost). → Verify `network_data` shows `hops: 5`.
+*   **Action 3**: Select `escalate_to_fincen`.
+*   **Trajectory Score**: **0.90** (1.00 base - 0.10 investigative cost).
 
 ---
 
 ## Setup & Usage Instructions
 
 ### Docker Run (HF Space Compatible)
+
 The project natively wraps into an isolated container instance for massive scalability scoring:
 ```bash
 docker build -t aml-investigation-env .
@@ -125,12 +121,14 @@ docker run -p 8000:8000 aml-investigation-env
 ```
 
 ### Local Dev Run (uv)
+
 To dynamically spawn the API server on `http://127.0.0.1:8000`:
 ```bash
 uv run server/app.py 
 ```
 
 ### Baseline Inference execution
+
 Run the inference loop to sequentially benchmark all tasks under local strict logs:
 ```bash
 HF_TOKEN="your_key" uv run python3 inference.py
@@ -142,10 +140,10 @@ HF_TOKEN="your_key" uv run python3 inference.py
 
 Evaluated using `Qwen2.5-72B-Instruct` over the standard OpenEnv interface.
 
-| Difficulty | Action Steps | Accuracy | Final Score |
+| Difficulty | Action Steps | Accuracy | Final Reward |
 | :--- | :--- | :--- | :--- |
 | **Easy** | 3 | 100% | **0.900** |
 | **Medium** | 4 | 100% | **0.850** |
 | **Hard** | 4 | 100% | **0.850** |
 
-*Note: Final scores include investigation penalties (-0.05/step), rewarding models that reach correctly verified decisions with minimal operational cost.*
+*Note: Final rewards include investigation penalties (-0.05/step). The environment rewards agents that reach correctly verified decisions with minimal operational cost.*
