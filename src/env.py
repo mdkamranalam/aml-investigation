@@ -33,9 +33,9 @@ class AMLInvestigationEnv(Environment):
         if task_name in TASKS:
             self.hidden_truth = TASKS[task_name].copy()
         elif task_name is None:
-            # 30% chance for fixed benchmark (to match README test cases)
-            # 70% chance for infinite synthetic variety (for realism)
-            if random.random() < 0.3:
+            # Golden Ratio: 70% Fixed Benchmark (to match README/tutorial)
+            # 30% Synthetic variety (for realism and training utility)
+            if random.random() < 0.7:
                 task_name = random.choice(list(TASKS.keys()))
                 self.hidden_truth = TASKS[task_name].copy()
             else:
