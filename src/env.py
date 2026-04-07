@@ -6,9 +6,13 @@ from openenv.core.env_server.interfaces import Environment
 from openenv.core.env_server.types import State
 
 from .models import AMLAction, AMLObservation
-from .tasks import TASKS, evaluate_decision
+from .tasks import TASKS, evaluate_decision, generate_synthetic_task
 
 class AMLInvestigationEnv(Environment):
+    """
+    Automated Audit Triage + AML Investigation Environment.
+    A multi-step MDP simulating a Fog-of-War compliance analyst task.
+    """
     SUPPORTS_CONCURRENT_SESSIONS: bool = True
 
     def __init__(self, max_steps: int = 6):
@@ -22,13 +26,17 @@ class AMLInvestigationEnv(Environment):
         
     def reset(self, task_name: str = None) -> AMLObservation:
         """
-        Resets the environment with a random or specified task,
-        clearing observation data and initializing hidden truth.
+        Resets the environment. 
+        Supports fixed benchmarks ("Easy", "Medium", "Hard") or 
+        procedural generation if task_name is None.
         """
-        if task_name is None or task_name not in TASKS:
-            task_name = random.choice(list(TASKS.keys()))
+        if task_name in TASKS:
+            self.hidden_truth = TASKS[task_name].copy()
+        else:
+            # Generate a fresh, unique synthetic task for infinite variety 🧬
+            self.hidden_truth = generate_synthetic_task()
+            task_name = task_name or "Synthetic"
             
-        self.hidden_truth = TASKS[task_name].copy()
         self.hidden_truth["task_name"] = task_name
         self._state = State(episode_id=str(uuid4()), step_count=0)
         
@@ -46,8 +54,9 @@ class AMLInvestigationEnv(Environment):
 
     def step(self, action: AMLAction) -> AMLObservation:
         """
-        Processes an action, updating observation or setting terminal flags.
-        Returns the updated observation mapping exactly to openenv Observation.
+        Processes a single Markov Decision Process (MDP) step.
+        Supports Investigative Actions (unlocking Fog of War) and 
+        Terminal Decisions (closing the case with the grader).
         """
         if self.current_obs.done:
             self.current_obs.system_message = "Episode is already completed."
@@ -58,7 +67,7 @@ class AMLInvestigationEnv(Environment):
         self.current_obs.system_message = None
         action_type = action.action_type
 
-        # Anti-Exploit Constraints: Infinite Loop Prevention
+        # Constraint: Infinite Loop Prevention
         if self._state.step_count >= self.max_steps and action_type not in ["approve_transaction", "freeze_account", "escalate_to_fincen"]:
             self.current_obs.done = True
             self.current_obs.system_message = "Max steps reached without a terminal decision. Auto-terminating."
@@ -68,14 +77,14 @@ class AMLInvestigationEnv(Environment):
         is_investigative = action_type in ["request_kyc", "trace_network", "check_history"]
         
         if is_investigative:
-            # Anti-Exploit Constraints: Amnesia Prevention
+            # Constraint: Amnesia Prevention (Penalize redundancy)
             if action_type in self.used_actions:
                 self.current_obs.system_message = f"Error: Action '{action_type}' already used."
                 step_reward = -0.2
             else:
                 self.used_actions.add(action_type)
                 step_reward = -0.05
-                # Reveal specific data pieces
+                # Reveal specific data pieces from hidden ground truth
                 if action_type == "request_kyc":
                     self.current_obs.kyc_data = self.hidden_truth.get("kyc_data")
                 elif action_type == "trace_network":
@@ -83,7 +92,7 @@ class AMLInvestigationEnv(Environment):
                 elif action_type == "check_history":
                     self.current_obs.history_data = self.hidden_truth.get("history_data")
         else:
-            # Terminal action logic
+            # Terminal action logic with deterministic grading
             self.current_obs.done = True
             step_reward = evaluate_decision(self.hidden_truth, action_type)
             
@@ -94,15 +103,11 @@ class AMLInvestigationEnv(Environment):
         
     @property
     def state(self) -> State:
-        """
-        Returns the environment's openenv base state.
-        """
+        """ Returns the environment's openenv base state container. """
         return self._state
         
     def get_full_state(self) -> Dict[str, Any]:
-        """
-        Helper function to get Fog of War context locally
-        """
+        """ Helper helper to fetch the raw environment state (for debugging/logs). """
         obs_dict = self.current_obs.model_dump() if hasattr(self.current_obs, "model_dump") else self.current_obs.dict()
         return {
             "step": self._state.step_count,
