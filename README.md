@@ -29,9 +29,19 @@ The environment enforces incomplete information. An agent initializes starting o
 *   `system_message`: A messaging layer the environment uses to feed boundary errors back to the AI. 
 
 ### The Action Space (`AMLAction`)
-The agent can choose between two fundamental action modes. **All actions strictly require a typed `rationale` reasoning string.**
-1. **Investigative Actions (-0.05 step penalty):** Keeps the episode alive `done=False`. Requesting `request_kyc`, `trace_network`, or `check_history` reveals those specific hidden chunks of data in the following Observation. 
-2. **Terminal Actions:** Immediately ends the episode `done=True` and submits to the grader. `approve_transaction`, `freeze_account`, or `escalate_to_fincen`.
+The `AMLAction` model requires two exact parameters per step:
+1. `action_type` (str): Must be exactly one of the six allowed enumeration strings below.
+2. `rationale` (str): A mandated reasoning string simulating Analyst notes (e.g., "Need to check history because amount is high"). If missing, Pydantic fails validation.
+
+**Investigative Actions (-0.05 step penalty):** Keeps the episode alive (`done=False`) and reveals data.
+* `request_kyc`: Investigates the sender's identity. Unlocks the `kyc_data` block.
+* `trace_network`: Investigates wire tracing and connections. Unlocks `network_data`.
+* `check_history`: Pulls past transaction anomaly alerts. Unlocks `history_data`.
+
+**Terminal Actions:** Instantly ends the episode (`done=True`) and submits to the Grader.
+* `approve_transaction`: Use when data safely proves the transaction is benign.
+* `freeze_account`: Use when data is highly suspicious and requires a manual hold.
+* `escalate_to_fincen`: Use when severe corporate/money laundering risk is identified.
 
 ### Anti-Exploit Mechanics
 *   **Amnesia Prevention:** Applying an action like `request_kyc` twice aggressively penalizes the agent by `-0.20` and fails to yield new information.
@@ -45,6 +55,63 @@ The tasks are automatically and randomly seeded dynamically natively inside `src
 1.  **Easy Task:** A standard $150 transaction with perfect KYC data and no bad actors. Success requires taking investigative actions and verifying nothing is out of place before hitting `approve_transaction`. 
 2.  **Medium Task:** A tricky $9500 edge-case transaction where risk bounds are slightly elevated. History highlights weird spikes in suspicious flags requiring deeper probing. The strict correct conclusion is to temporarily `freeze_account`.
 3.  **Hard Task:** A massive $450,000 movement hidden behind 5 network "hops", high-risk jurisdictions, shell company affiliations, and fake KYC data. To solve this, the LLM must peel back multiple layers of investigation before recognizing pattern severity and correctly using `escalate_to_fincen`.
+
+## Procedural Simulation Mode
+
+Beyond the fixed benchmark set, the environment features a **Synthetic Case Generator** for high-fidelity RL training. 
+
+By default, the `reset()` function uses a **Mixture Mode**:
+* **30% Deterministic:** Resets to one of the three "Golden" benchmark tasks (Easy, Medium, or Hard) for consistent scoring.
+* **70% Synthetic:** Generates a completely unique transaction with randomized IDs (`SYNTH-####`), amounts, jurisdictions (e.g., Panama, Caymans, UK), and risk notes. 
+
+This hybrid approach ensures that agents can be both **evaluated** (on the fixed set) and **trained** (on the infinite synthetic set) to generalize their compliance reasoning.
+
+---
+
+## How to use on Hugging Face (Gradio Playground)
+
+When you access the Hugging Face Space URL, OpenEnv automatically provides an interactive web UI (Playground) allowing humans to play the environment! 
+
+1. **Reset**: Click the **Reset** button to initialize a new random episode. The *Raw JSON response* box will populate with initial sparse data.
+2. **Action Selection**: Under **Action Type**, select an investigative or terminal action. 
+3. **Rationale**: You must type a reason in the **Rationale** text box (simulating analyst notes).
+4. **Step**: Click the **Step** button to process the action.
+
+### Glossary of Actions
+* `request_kyc`: Investigates sender identity (-0.05).
+* `trace_network`: Investigates wire tracing and connections (-0.05).
+* `check_history`: Pulls past transaction anomaly alerts (-0.05).
+* `approve_transaction`: Ends episode. Use for verified safe entities.
+* `freeze_account`: Ends episode. Use for suspicious but non-definitive risk.
+* `escalate_to_fincen`: Ends episode. Use for severe laundering/terrorist risk.
+
+---
+
+### Try it Yourself: Test Cases
+
+The environment uses a **30% mixture of fixed benchmark tasks**. Click **Reset** until the `amount_usd` matches one of the values below to follow the manual walkthrough:
+
+**1. The "Clean Transfer" (Easy - $150.00)**
+*   **Step 1**: Select `request_kyc` + Type Rationale: "Verifying sender identity". 
+*   **Step 2**: Click **Step**. → Verify `kyc_data` shows `status: verified`.
+*   **Step 3**: Select `approve_transaction` + Type Rationale: "Verified low-risk entity".
+*   **Final Result**: Case closed with **Reward: 1.0**.
+
+**2. The "Structuring Risk" (Medium - $9,500.00)**
+*   **Step 1**: Select `check_history` + Type Rationale: "Checking past alerts for sub-10k transfer".
+*   **Step 2**: Click **Step**. → Verify `history_data` shows `suspicious_flags: 1`.
+*   **Step 3**: Select `trace_network` + Type Rationale: "Checking for jurisdictional hops".
+*   **Step 4**: Click **Step**. → Verify `network_data` shows `hops: 3`. 
+*   **Step 5**: Select `freeze_account` + Type Rationale: "Elevated risk flags require manual hold".
+*   **Final Result**: Case closed with **Reward: 1.0**.
+
+**3. The "Shell Network" (Hard - $450,000.00)**
+*   **Step 1**: Select `request_kyc` + Type Rationale: "Large corporate transfer investigation".
+*   **Step 2**: Click **Step**. → Verify `kyc_data` says `Shell company suspicion`.
+*   **Step 3**: Select `trace_network` + Type Rationale: "Tracing beneficiary structure".
+*   **Step 4**: Click **Step**. → Verify `network_data` shows `hops: 5` and `jurisdictions: ["High Risk A", "High Risk B"]`.
+*   **Step 5**: Select `escalate_to_fincen` + Type Rationale: "Definitive money laundering via high-risk shell network".
+*   **Final Result**: Case closed with **Reward: 1.0**.
 
 ---
 
@@ -60,7 +127,6 @@ docker run -p 8000:8000 aml-investigation-env
 ### Local Dev Run (uv)
 To dynamically spawn the API server on `http://127.0.0.1:8000`:
 ```bash
-# Start the Env HTTP Router Let
 uv run server/app.py 
 ```
 
@@ -72,13 +138,14 @@ HF_TOKEN="your_key" uv run python3 inference.py
 
 ---
 
-## Baseline Score 
-Using standard endpoint evaluation running over OpenAI API formatting.
+## Baseline Benchmark Scores
 
-| Model | Task Difficulty | Action Steps Used | Final Score |
+Evaluated using `Qwen2.5-72B-Instruct` over the standard OpenEnv interface.
+
+| Difficulty | Action Steps | Accuracy | Final Score |
 | :--- | :--- | :--- | :--- |
-| `Qwen/Qwen2.5-72B-Instruct` | Easy | 3 | **0.900** |
-| `Qwen/Qwen2.5-72B-Instruct` | Medium | 4 | **0.850** |
-| `Qwen/Qwen2.5-72B-Instruct` | Hard | 4 | **0.850** |
+| **Easy** | 3 | 100% | **0.900** |
+| **Medium** | 4 | 100% | **0.850** |
+| **Hard** | 4 | 100% | **0.850** |
 
-*Note: The model loses `0.05` points for every investigation action intentionally requested, proving it properly managed the MDP Fog-of-War costs while maximizing task safety correctly.*
+*Note: Final scores include investigation penalties (-0.05/step), rewarding models that reach correctly verified decisions with minimal operational cost.*
