@@ -92,20 +92,20 @@ When you access the Hugging Face Space URL, OpenEnv automatically provides an in
 The environment uses a **30% mixture of fixed benchmark tasks**. Click **Reset** until the `amount_usd` matches one of the values below to follow the manual walkthrough:
 
 **1. The "Clean Transfer" (Easy - $150.00)**
-*   **Action 1**: Select `request_kyc` (-0.05 cost). → Verify `kyc_data` says `status: verified`.
-*   **Action 2**: Select `approve_transaction`. 
+*   **Action 1**: `request_kyc` (Rationale: "Routine ID verification"). → Verify `kyc_data` says `status: verified`.
+*   **Action 2**: `approve_transaction` (Rationale: "Low risk and verified"). 
 *   **Trajectory Score**: **0.95** (1.00 base - 0.05 investigative cost).
 
 **2. The "Structuring Risk" (Medium - $9,500.00)**
-*   **Action 1**: Select `check_history` (-0.05 cost). → Verify `history_data` shows `suspicious_flags: 1`.
-*   **Action 2**: Select `trace_network` (-0.05 cost). → Verify `network_data` shows `hops: 3`. 
-*   **Action 3**: Select `freeze_account`.
+*   **Action 1**: `check_history` (Rationale: "Checking past alerts for sub-10k transfer"). → Verify `history_data` shows `suspicious_flags: 1`.
+*   **Action 2**: `trace_network` (Rationale: "Investigating jurisdictional hops"). → Verify `network_data` shows `hops: 3`. 
+*   **Action 3**: `freeze_account` (Rationale: "Risk flags and multiple hops found").
 *   **Trajectory Score**: **0.90** (1.00 base - 0.10 investigative cost).
 
 **3. The "Shell Network" (Hard - $450,000.00)**
-*   **Action 1**: Select `request_kyc` (-0.05 cost). → Verify `kyc_data` says `Shell company suspicion`.
-*   **Action 2**: Select `trace_network` (-0.05 cost). → Verify `network_data` shows `hops: 5`.
-*   **Action 3**: Select `escalate_to_fincen`.
+*   **Action 1**: `request_kyc` (Rationale: "Investigating shell affiliations"). → Verify `kyc_data` says `Shell company suspicion`.
+*   **Action 2**: `trace_network` (Rationale: "Tracing beneficiary hops"). → Verify `network_data` shows `hops: 5`.
+*   **Action 3**: `escalate_to_fincen` (Rationale: "Definitive money laundering network").
 *   **Trajectory Score**: **0.90** (1.00 base - 0.10 investigative cost).
 
 ---
