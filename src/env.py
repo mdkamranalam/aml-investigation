@@ -27,15 +27,23 @@ class AMLInvestigationEnv(Environment):
     def reset(self, task_name: str = None) -> AMLObservation:
         """
         Resets the environment. 
-        Supports fixed benchmarks ("Easy", "Medium", "Hard") or 
-        procedural generation if task_name is None.
+        Supports fixed benchmark tasks ("Easy", "Medium", "Hard") 
+        or procedural variety if task_name is None or "Random".
         """
         if task_name in TASKS:
             self.hidden_truth = TASKS[task_name].copy()
+        elif task_name is None:
+            # 30% chance for fixed benchmark (to match README test cases)
+            # 70% chance for infinite synthetic variety (for realism)
+            if random.random() < 0.3:
+                task_name = random.choice(list(TASKS.keys()))
+                self.hidden_truth = TASKS[task_name].copy()
+            else:
+                self.hidden_truth = generate_synthetic_task()
+                task_name = "Synthetic"
         else:
-            # Generate a fresh, unique synthetic task for infinite variety 🧬
+            # Explicitly generate a unique task for any other string
             self.hidden_truth = generate_synthetic_task()
-            task_name = task_name or "Synthetic"
             
         self.hidden_truth["task_name"] = task_name
         self._state = State(episode_id=str(uuid4()), step_count=0)
