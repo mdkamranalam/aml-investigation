@@ -1,11 +1,3 @@
----
-title: AML Investigation
-emoji: 🕵️
-colorFrom: blue
-colorTo: green
-sdk: docker
-app_port: 8000
----
 # AML Investigation Environment
 
 A rigorous, real-world Markov Decision Process (MDP) RL environment built on the `openenv-core` framework. Designed to evaluate an autonomous agent's ability to operate under a "Fog of War" doing high-stakes financial compliance work (Anti-Money Laundering analysis).
