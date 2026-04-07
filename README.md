@@ -9,6 +9,10 @@ app_port: 8000
 
 A rigorous, real-world Markov Decision Process (MDP) RL environment built on the `openenv-core` framework. Designed to evaluate an autonomous agent's ability to operate under a "Fog of War" doing high-stakes financial compliance work (Anti-Money Laundering analysis).
 
+## Links:
+* [Hugging Face Space](https://huggingface.co/spaces/TheDevCrew/aml_investigation_env)
+* [GitHub Repository](https://github.com/mdkamranalam/aml-investigation)
+
 ## Environment Description & Motivation (Real-World Task)
 In the real world, human analysts are constantly screening thousands of automated wire transfers. They are routinely given sparse initialization data (e.g., just a Transaction ID and Dollar amount) and must actively spend operational time/resources "investigating" multiple streams of data before making irreversible, legally binding terminal decisions.
 
