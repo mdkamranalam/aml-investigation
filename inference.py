@@ -9,9 +9,12 @@ from src.models import AMLAction
 from src.tasks import TASKS
 
 # Environment settings from pre-submission logic requirements
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY", "dummy-key")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+HF_TOKEN = os.getenv("HF_TOKEN")
+
+# Optional - if you use from_docker_image():
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 BENCHMARK = "aml_investigation"
 MAX_STEPS = 6
 
@@ -113,7 +116,7 @@ def run_task(client: OpenAI, env: AMLInvestigationEnv, task_name: str):
 
 def main():
     client = OpenAI(
-        api_key=API_KEY,
+        api_key=HF_TOKEN,
         base_url=API_BASE_URL
     )
     env = AMLInvestigationEnv(max_steps=MAX_STEPS)
